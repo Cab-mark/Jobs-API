@@ -43,7 +43,7 @@ my-fastapi-app
 Once the application is running, you can access the "Hello World" endpoint at:
 
 ```
-http://127.0.0.1:8000/api/v1/hello
+http://127.0.0.1:8000/api/v1/jobs
 ```
 
 You should see a response:

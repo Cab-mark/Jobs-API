@@ -1,2 +1,6 @@
 FastAPI
 uvicorn
+pydantic
+typing
+datetime
+uuid
