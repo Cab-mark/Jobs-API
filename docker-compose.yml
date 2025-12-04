@@ -1,0 +1,45 @@
+services:
+  # PostgreSQL Database Service (Local Development Only)
+  postgres:
+    image: postgres:16-alpine
+    container_name: jobs-api-postgres
+    environment:
+      POSTGRES_USER: jobsapi
+      POSTGRES_PASSWORD: jobsapi
+      POSTGRES_DB: jobsdb
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persistent volume for database data
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: Add init scripts if needed
+      # - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobsapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Jobs API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jobs-api
+    environment:
+      # Database connection for local Docker environment
+      DATABASE_URL: postgresql://jobsapi:jobsapi@postgres:5432/jobsdb
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Mount source code for development (optional - remove for production-like setup)
+      - ./app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Named volume for PostgreSQL data persistence
+volumes:
+  postgres_data:
+    driver: local
