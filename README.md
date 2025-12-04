@@ -1,6 +1,6 @@
 # Jobs API Microservice (FastAPI)
 
-A lightweight FastAPI microservice for listing and managing job postings. The job schema aligns with the TypeScript interface used in the nextjs_govuk_experiment (see active PR for details).
+A lightweight FastAPI microservice for listing and managing job postings with PostgreSQL database support. The job schema aligns with the TypeScript interface used in the nextjs_govuk_experiment (see active PR for details).
 
 ## Project Structure
 
@@ -9,15 +9,81 @@ Jobs-API-Microservice
 ├── app
 │   ├── __init__.py
 │   ├── main.py                # FastAPI app and router mounting
+│   ├── database.py            # Database configuration
+│   ├── models.py              # SQLAlchemy models
 │   └── api
 │       └── v1
 │           └── jobs.py        # Jobs routes + Pydantic models
+├── scripts
+│   └── seed_db.py            # Database seeding script
+├── Dockerfile                 # Docker image for API
+├── docker-compose.yml         # Local development with Docker
+├── .env.example              # Environment variables template
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md
 ```
 
-## Setup
+## Database Configuration
+
+This application supports two database configurations:
+
+- **Local Development**: PostgreSQL in Docker (via docker-compose)
+- **Other Environments**: AWS RDS PostgreSQL (via environment variables)
+
+The application uses the `DATABASE_URL` environment variable to connect to the database, making it easy to switch between environments.
+
+## Setup Options
+
+### Option 1: Docker (Recommended for Local Development)
+
+This setup runs both the API and PostgreSQL database in Docker containers with persistent storage.
+
+1) Clone the repository
+
+```bash
+git clone <repository-url>
+cd Jobs-API-Microservice
+```
+
+2) Start the services with Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+This will:
+- Start a PostgreSQL database on port 5432 with persistent volume
+- Build and start the API on port 8000
+- Automatically create database tables on startup
+
+3) (Optional) Seed the database with sample data
+
+```bash
+docker-compose exec api python scripts/seed_db.py
+```
+
+4) Access the API
+
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- Database: localhost:5432 (credentials in docker-compose.yml)
+
+5) Stop the services
+
+```bash
+docker-compose down
+```
+
+To remove the database volume (deletes all data):
+
+```bash
+docker-compose down -v
+```
+
+### Option 2: Local Python Setup (without Docker)
+
+This setup requires a separate PostgreSQL instance.
 
 1) Clone and enter the repo
 
@@ -32,13 +98,61 @@ cd Jobs-API-Microservice
 pip install -r requirements.txt
 ```
 
-3) Run the service
+3) Set up database connection
+
+Create a `.env` file (copy from `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your database credentials:
+
+```
+DATABASE_URL=postgresql://username:password@localhost:5432/jobsdb
+```
+
+4) Run the service
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
 The app will be available at `http://127.0.0.1:8000`.
+
+5) (Optional) Seed the database
+
+```bash
+python scripts/seed_db.py
+```
+
+## Deploying to AWS RDS
+
+For staging/production environments using AWS RDS:
+
+1) Create an RDS PostgreSQL instance in AWS
+
+2) Set the `DATABASE_URL` environment variable in your deployment environment:
+
+```bash
+export DATABASE_URL=postgresql://username:password@your-rds-endpoint.region.rds.amazonaws.com:5432/jobsdb
+```
+
+For AWS services like ECS, Lambda, or Elastic Beanstalk, set this as an environment variable in the service configuration.
+
+3) Deploy your application
+
+The application will automatically:
+- Connect to the RDS instance using the DATABASE_URL
+- Create necessary tables on startup
+- Use connection pooling for optimal performance
+
+### Security Notes for AWS RDS
+
+- Use AWS Secrets Manager or Parameter Store for database credentials
+- Configure RDS security groups to allow connections only from your application
+- Enable SSL/TLS for database connections in production
+- Use IAM database authentication when possible
 
 ## API Overview
 
@@ -112,10 +226,27 @@ curl -s -X POST "http://127.0.0.1:8000/jobs" \
 curl -s "http://127.0.0.1:8000/jobs/<job_id>" | jq
 ```
 
-## Notes
+## Development
 
-- Data is currently in-memory for demonstration. Connect a database (e.g., PostgreSQL with SQLAlchemy) for persistence.
-- To introduce versioned endpoints, mount the router with a prefix in `app/main.py`, e.g. `app.include_router(jobs_router, prefix="/api/v1")` and update examples accordingly.
+### Docker Development Workflow
+
+The docker-compose setup includes hot-reloading for development:
+
+1. Make changes to files in the `app/` directory
+2. The API container will automatically reload
+3. View logs: `docker-compose logs -f api`
+
+### Database Management
+
+- Connect to PostgreSQL: `docker-compose exec postgres psql -U jobsapi -d jobsdb`
+- View logs: `docker-compose logs postgres`
+- Reset database: `docker-compose down -v && docker-compose up -d`
+
+## Environment Variables
+
+| Variable | Description | Default (Local) | Production Example |
+|----------|-------------|-----------------|-------------------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://jobsapi:jobsapi@postgres:5432/jobsdb` | `postgresql://user:pass@rds-endpoint:5432/db` |
 
 ## License
 
