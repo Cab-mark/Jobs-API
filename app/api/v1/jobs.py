@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List, Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pydantic import Field
+from pydantic import ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from jobs_data_contracts.jobs import models as dc_models
@@ -16,21 +16,21 @@ class JobCreatePayload(dc_models.JobCreate):
     """Extend jobs-data-contracts JobCreate to include datePosted per OpenAPI."""
 
     date_posted: dc_models.AwareDatetime = Field(..., alias="datePosted")
-    model_config = dc_models.ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class JobUpdatePayload(dc_models.JobUpdate):
     """Patch payload including optional datePosted."""
 
     date_posted: dc_models.AwareDatetime | None = Field(None, alias="datePosted")
-    model_config = dc_models.ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class JobResponse(dc_models.Job):
     """Job response including datePosted."""
 
     date_posted: dc_models.AwareDatetime = Field(..., alias="datePosted")
-    model_config = dc_models.ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True)
 
 
 router = APIRouter()
