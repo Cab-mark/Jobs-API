@@ -2,8 +2,7 @@
 
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Get database URL from environment variable
 # For local Docker: postgresql://jobsapi:jobsapi@postgres:5432/jobsdb
@@ -13,6 +12,8 @@ DATABASE_URL = os.getenv(
     "postgresql://jobsapi:jobsapi@postgres:5432/jobsdb"
 )
 
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+
 # Create SQLAlchemy engine
 # For production/AWS RDS, you might want to add connection pool settings
 engine = create_engine(
@@ -20,6 +21,7 @@ engine = create_engine(
     pool_pre_ping=True,  # Enables connection health checks
     pool_size=10,  # Adjust based on your needs
     max_overflow=20,  # Maximum number of connections to create above pool_size
+    connect_args=connect_args,
 )
 
 # Create SessionLocal class

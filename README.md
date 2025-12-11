@@ -1,6 +1,6 @@
 # Jobs API Microservice (FastAPI)
 
-A lightweight FastAPI microservice for listing and managing job postings with PostgreSQL database support. The job schema aligns with the TypeScript interface used in the nextjs_govuk_experiment (see active PR for details).
+A lightweight FastAPI microservice for listing and managing job postings with PostgreSQL database support. Payloads are validated with the Pydantic models published in [`jobs-data-contracts`](https://pypi.org/project/jobs-data-contracts/) and follow the canonical OpenAPI schema stored at `schemas/jobs/openapi.yaml`.
 
 ## Project Structure
 
@@ -23,6 +23,8 @@ Jobs-API-Microservice
 ├── requirements.txt
 └── README.md
 ```
+
+The OpenAPI source of truth for this service is kept in `schemas/jobs/openapi.yaml`.
 
 ## Database Configuration
 
@@ -55,7 +57,7 @@ docker-compose up -d
 This will:
 - Start a PostgreSQL database on port 5432 with persistent volume
 - Build and start the API on port 8000
-- Automatically create database tables on startup
+- Run Alembic migrations (`alembic upgrade head`) before the API starts
 
 3) (Optional) Seed the database with sample data
 
@@ -112,7 +114,13 @@ Edit `.env` with your database credentials:
 DATABASE_URL=postgresql://username:password@localhost:5432/jobsdb
 ```
 
-4) Run the service
+4) Run database migrations
+
+```bash
+alembic upgrade head
+```
+
+5) Run the service
 
 ```bash
 uvicorn app.main:app --reload
@@ -120,7 +128,7 @@ uvicorn app.main:app --reload
 
 The app will be available at `http://127.0.0.1:8000`.
 
-5) (Optional) Seed the database
+6) (Optional) Seed the database
 
 ```bash
 python scripts/seed_db.py
@@ -140,11 +148,16 @@ export DATABASE_URL=postgresql://username:password@your-rds-endpoint.region.rds.
 
 For AWS services like ECS, Lambda, or Elastic Beanstalk, set this as an environment variable in the service configuration.
 
-3) Deploy your application
+3) Run database migrations
+
+```bash
+alembic upgrade head
+```
+
+4) Deploy your application
 
 The application will automatically:
 - Connect to the RDS instance using the DATABASE_URL
-- Create necessary tables on startup
 - Use connection pooling for optimal performance
 
 ### Security Notes for AWS RDS
@@ -158,40 +171,17 @@ The application will automatically:
 
 Current routes are mounted without a version prefix (base path is `/`). Endpoints exposed by `app/api/v1/jobs.py`:
 
-- GET `/jobs` — list all jobs
-- POST `/jobs` — create a new job (returns the created job with generated `id`)
-- GET `/jobs/{job_id}` — fetch a single job by ID
+- GET `/jobs` — list all jobs (returns `JobSummary` items)
+- POST `/jobs` — create a new job (validated with `jobs-data-contracts` `JobCreate` + `datePosted`)
+- GET `/jobs/{externalId}` — fetch a single job by `externalId`
+- PUT `/jobs/{externalId}` — replace a job; body `externalId` must match the path parameter
+- PATCH `/jobs/{externalId}` — partial update; `externalId` cannot be modified
 
 If you prefer versioned paths (e.g., `/api/v1/jobs`), add a prefix when including the router in `app/main.py`.
 
-## Data Model (summary)
+## Data Model
 
-The `Job` model includes (non-exhaustive):
-
-- id, title, description, organisation, location, grade, assignmentType, personalSpec
-- Optional: nationalityRequirement, summary, applyUrl, benefits, profession, applyDetail, salary, closingDate, jobNumbers
-- contacts (bool), Optional: contactName, contactEmail, contactPhone
-- recruitmentEmail
-
-Example job object:
-
-```json
-{
-   "id": "1567",
-   "title": "Policy Advisor",
-   "description": "This is a fantastic job for a policy advisor...",
-   "organisation": "Ministry of Defence",
-   "location": "3 Glass Wharf, Bristol, BS2 OEL",
-   "grade": "Grade 7",
-   "assignmentType": "Fixed Term Appointment (FTA)",
-   "personalSpec": "Some personal specification text",
-   "salary": "£45,000",
-   "closingDate": "20 December 2025",
-   "jobNumbers": 1,
-   "contacts": false,
-   "recruitmentEmail": "recruitment@civilservice.gov.uk"
-}
-```
+The canonical schema is defined in `schemas/jobs/openapi.yaml` and the Pydantic models from the `jobs-data-contracts` package. Complex fields (locations, salary, contacts, attachments) are stored as JSON/JSONB in the database.
 
 ## Quick Start (cURL)
 
@@ -207,23 +197,34 @@ curl -s "http://127.0.0.1:8000/jobs" | jq
 curl -s -X POST "http://127.0.0.1:8000/jobs" \
    -H "Content-Type: application/json" \
    -d '{
+      "externalId": "ext-123",
+      "approach": "external",
       "title": "Backend Engineer",
       "description": "Build APIs with FastAPI.",
       "organisation": "Acme Corp",
-      "location": "Remote",
-      "grade": "Senior",
-      "assignmentType": "Permanent",
+      "location": [{
+        "townName": "London",
+        "region": "London",
+        "latitude": 51.5,
+        "longitude": -0.1
+      }],
+      "grade": "grade_7",
+      "assignmentType": "permanent",
+      "workLocation": ["office_based"],
+      "workingPattern": ["full_time"],
       "personalSpec": "Python, FastAPI",
-      "salary": "£100,000",
-      "contacts": false,
+      "applyDetail": "Apply online",
+      "datePosted": "2025-01-01T00:00:00Z",
+      "closingDate": "2025-02-01T00:00:00Z",
+      "profession": "policy",
       "recruitmentEmail": "talent@acme.example"
-   }' | jq
+    }' | jq
 ```
 
 - Get a job by ID
 
 ```bash
-curl -s "http://127.0.0.1:8000/jobs/<job_id>" | jq
+curl -s "http://127.0.0.1:8000/jobs/<externalId>" | jq
 ```
 
 ## Development
