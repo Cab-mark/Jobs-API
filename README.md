@@ -215,7 +215,7 @@ curl -s -X POST "http://127.0.0.1:8000/jobs" \
       "personalSpec": "Python, FastAPI",
       "applyDetail": "Apply online",
       "datePosted": "2025-01-01T00:00:00Z",
-      "closingDate": "2025-02-01T00:00:00Z",
+      "dateClosing": "2025-02-01T00:00:00Z",
       "profession": "policy",
       "recruitmentEmail": "talent@acme.example"
     }' | jq
