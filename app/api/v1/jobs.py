@@ -205,7 +205,7 @@ def replace_job(external_id: str, job_payload: JobCreatePayload, db: Session = D
             continue
         setattr(job, key, value)
 
-    job.version = job.version + 1
+    job.version += 1
     db.commit()
     db.refresh(job)
     return _job_model_to_response(job)
@@ -232,7 +232,7 @@ def update_job(
             if key == "id":
                 continue
             setattr(job, key, value)
-        job.version = job.version + 1
+        job.version += 1
         db.commit()
         db.refresh(job)
 

@@ -15,7 +15,6 @@ def upgrade() -> None:
         "jobs",
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
     )
-    op.alter_column("jobs", "version", server_default=None)
 
 
 def downgrade() -> None:
