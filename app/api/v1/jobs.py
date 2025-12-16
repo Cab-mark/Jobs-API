@@ -50,7 +50,6 @@ FIELD_MAP = {
     "workingPattern": "working_pattern",
     "personalSpec": "personal_spec",
     "applyDetail": "apply_detail",
-    "closingDate": "closing_date",
     "recruitmentEmail": "recruitment_email",
     "nationalityRequirement": "nationality_requirement",
     "jobNumbers": "job_numbers",
