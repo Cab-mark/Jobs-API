@@ -68,6 +68,7 @@ docker-compose exec api python scripts/seed_db.py
 4) Access the API
 
 - API: http://localhost:8000
+- Health: http://localhost:8000/health
 - API Docs: http://localhost:8000/docs
 - Database: localhost:5432 (credentials in docker-compose.yml)
 
@@ -171,6 +172,8 @@ The application will automatically:
 
 Current routes are mounted without a version prefix (base path is `/`). Endpoints exposed by `app/api/v1/jobs.py`:
 
+- GET `/` — basic service info and a pointer to `/docs`
+- GET `/health` — returns `{ "status": "ok", "db": "ok|unavailable" }`
 - GET `/jobs` — list all jobs (returns `JobSummary` items)
 - POST `/jobs` — create a new job (validated with `jobs-data-contracts` `JobCreate` + `datePosted`)
 - GET `/jobs/{externalId}` — fetch a single job by `externalId`
@@ -184,6 +187,18 @@ If you prefer versioned paths (e.g., `/api/v1/jobs`), add a prefix when includin
 The canonical schema is defined in `schemas/jobs/openapi.yaml` and the Pydantic models from the `jobs-data-contracts` package. Complex fields (locations, salary, contacts, attachments) are stored as JSON/JSONB in the database.
 
 ## Quick Start (cURL)
+
+- Health check
+
+```bash
+curl -s http://127.0.0.1:8000/health | jq
+```
+
+- Root landing page
+
+```bash
+curl -s http://127.0.0.1:8000/ | jq
+```
 
 - List jobs
 
